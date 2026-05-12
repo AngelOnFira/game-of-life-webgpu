@@ -1,0 +1,37 @@
+[package]
+name = "wasm-rustgpu-game-of-life"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+gol-engine = { path = "../engine" }
+egui = "0.34"
+egui-wgpu = "0.34"
+egui_plot = "0.35"
+wgpu = { version = "29", default-features = false, features = ["webgpu", "spirv", "wgsl"] }
+log = "0.4"
+web-time = "1.1"
+# `thread_rng` pulls OS entropy via getrandom; on wasm it needs the wasm_js
+# backend (configured below + via .cargo/config.toml rustflags).
+rand = "0.10"
+
+# Wasm build: minimal eframe with just the wgpu backend (the web target doesn't
+# need winit's x11/wayland), plus wasm-bindgen plumbing.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+eframe = { version = "0.34", default-features = false, features = ["wgpu", "default_fonts"] }
+console_error_panic_hook = "0.1"
+console_log = "1"
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+web-sys = { version = "0.3", features = ["Document", "Window", "Element", "HtmlCanvasElement"] }
+# getrandom (transitively pulled by rand) needs `wasm_js` on wasm32 so it
+# can source entropy from `crypto.getRandomValues` via wasm-bindgen.
+getrandom = { version = "0.4", features = ["wasm_js"] }
+
+# Native build (only used for `cargo test`): eframe needs a winit backend.
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+eframe = { version = "0.34", default-features = false, features = ["wgpu", "default_fonts", "x11", "wayland"] }

@@ -1,0 +1,29 @@
+[package]
+name = "gol-engine"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+# This crate is the part to read if you want to understand the GPU side of the
+# demo: pipeline setup, ping-pong buffers, compute dispatch, the CPU fallback
+# implementation, and optional GPU-side timing.
+#
+# It has no knowledge of egui or the eframe app — `app/` consumes it.
+
+[lib]
+crate-type = ["rlib"]
+
+[build-dependencies]
+spirv-builder = "0.10.0-alpha.1"
+
+[dev-dependencies]
+naga = { version = "29", features = ["wgsl-out", "spv-in"] }
+
+[dependencies]
+wgpu = { version = "29", default-features = false, features = ["webgpu", "spirv", "wgsl"] }
+bytemuck = { version = "1.18", features = ["derive"] }
+log = "0.4"
+web-time = "1.1"
+# Seeded deterministic PRNG for `randomize` — wasm-friendly.
+rand = { version = "0.10", default-features = false, features = ["std_rng"] }
+thiserror = "2"

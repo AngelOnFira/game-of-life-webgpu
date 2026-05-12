@@ -1,0 +1,26 @@
+[workspace]
+resolver = "2"
+members = ["app", "engine"]
+exclude = ["shader"]
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+
+# Always optimize wgpu/naga even in dev builds — debug-level naga is painfully slow.
+[profile.dev.package."*"]
+opt-level = 2
+
+[profile.dev]
+opt-level = 1
+
+# Build-deps in release-ish mode so the nested rust-gpu codegen doesn't take forever.
+# Per the rust-gpu writing-shader-crates docs.
+[profile.release.build-override]
+opt-level = 3
+codegen-units = 16
+
+[profile.dev.build-override]
+opt-level = 3

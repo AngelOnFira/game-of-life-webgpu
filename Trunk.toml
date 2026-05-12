@@ -1,0 +1,9 @@
+[build]
+target = "index.html"
+# Override at build time for Pages: `trunk build --public-url /repo-name/`.
+public_url = "/"
+
+[serve]
+addresses = ["127.0.0.1"]
+# 8265 — the year Conway published Game of Life in Scientific American.
+port = 8265

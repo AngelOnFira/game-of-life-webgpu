@@ -1,0 +1,14 @@
+[package]
+name = "gol-shader"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["dylib", "rlib"]
+
+[dependencies]
+spirv-std = "0.10.0-alpha.1"
+
+# build-dependencies don't apply here; this is the shader crate itself.
+# Cross-compiled to spirv-unknown-vulkan1.1 by spirv-builder via app/build.rs.

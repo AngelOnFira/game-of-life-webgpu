@@ -1,0 +1,78 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # `rust-toolchain.toml` pins nightly-2026-04-11 with rust-src, rustc-dev,
+      # llvm-tools, and the wasm32-unknown-unknown target — rustup respects it
+      # automatically when cargo runs in this directory. We just need rustup.
+      - name: Install Rust toolchain
+        run: |
+          rustup show active-toolchain || rustup toolchain install
+          rustup target add wasm32-unknown-unknown
+
+      - name: Cache cargo registry & target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+            shader/target
+          key: cargo-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml', 'Cargo.lock', 'shader/Cargo.toml', 'app/Cargo.toml') }}
+          restore-keys: |
+            cargo-${{ runner.os }}-
+
+      - name: Install Trunk
+        uses: jetli/trunk-action@v0.5.0
+        with:
+          version: 'latest'
+
+      # System libs needed by eframe's native build for the `cargo test` run
+      # below — they exercise the SPIR-V → WGSL translation that the browser
+      # will perform at runtime.
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libwayland-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev
+
+      - name: Run shader-translation tests
+        run: cargo test --manifest-path app/Cargo.toml --tests
+
+      - name: Determine public URL
+        id: public_url
+        run: echo "url=/${GITHUB_REPOSITORY##*/}/" >> "$GITHUB_OUTPUT"
+
+      - name: Build (release)
+        run: trunk build --release --public-url "${{ steps.public_url.outputs.url }}"
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

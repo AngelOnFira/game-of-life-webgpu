@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Conway's Game of Life — Rust GPU + WebGPU</title>
+    <base data-trunk-public-url />
+    <link data-trunk rel="rust" href="app/Cargo.toml" data-wasm-opt="z" />
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background: #0a0a0a;
+            color: #eee;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            overflow: hidden;
+        }
+        #gol-canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+        #unsupported {
+            display: none;
+            padding: 2rem;
+            max-width: 540px;
+            margin: 4rem auto;
+            line-height: 1.5;
+        }
+        #unsupported h1 { color: #ff8866; }
+        #unsupported a { color: #88ccff; }
+        #loading-message {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #888;
+            font-size: 1rem;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gol-canvas"></canvas>
+    <div id="loading-message">Loading WebAssembly…</div>
+    <div id="unsupported">
+        <h1>WebGPU required</h1>
+        <p>This demo runs Conway's Game of Life on the GPU using
+           <a href="https://gpuweb.github.io/gpuweb/">WebGPU</a>, which your
+           browser doesn't expose.</p>
+        <p>Try Chrome 113+, Edge, recent Firefox (141+), or Safari 26+.
+           On Firefox you may need <code>dom.webgpu.enabled</code>.</p>
+    </div>
+    <script>
+        if (!('gpu' in navigator)) {
+            document.getElementById('gol-canvas').style.display = 'none';
+            document.getElementById('loading-message').style.display = 'none';
+            document.getElementById('unsupported').style.display = 'block';
+        } else {
+            // Hide the placeholder as soon as Trunk's runtime finishes booting
+            // the wasm — eframe takes over the canvas after this fires.
+            addEventListener('TrunkApplicationStarted', () => {
+                const el = document.getElementById('loading-message');
+                if (el) el.remove();
+            });
+        }
+    </script>
+</body>
+</html>
