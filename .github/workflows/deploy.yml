@@ -55,9 +55,9 @@ jobs:
         run: cargo test --manifest-path app/Cargo.toml --tests
 
       - name: Build (release)
-        # Path prefix must match what the deployment is served under.
-        # Keep this in sync with `pages_path` in the justfile.
-        run: trunk build --release --public-url /game-of-life-webgpu/
+        # User/org Pages at the root of a custom domain — assets served from /.
+        # If forking to a project Pages URL, change to `/<repo>/`.
+        run: trunk build --release --public-url /
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

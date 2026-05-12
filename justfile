@@ -7,10 +7,11 @@
 # the interesting part anyway — we want it running at proper speed locally
 # too, not just in CI.
 
-# Path prefix the bundle is served from. Must match the URL segment that
-# precedes `index.html` in production, or asset fetches 404. For the
-# `life.forest-anderson.ca` deployment that's `/game-of-life-webgpu/`.
-pages_path := "/game-of-life-webgpu/"
+# Path prefix the bundle is served from. The site is hosted at the root of
+# `life.forest-anderson.ca/` (user/org Pages with a custom domain), so assets
+# are fetched relative to `/`. If you fork this and serve under a project
+# Pages URL like `<user>.github.io/<repo>/`, change this to `/<repo>/`.
+pages_path := "/"
 
 # Show available recipes.
 default:
