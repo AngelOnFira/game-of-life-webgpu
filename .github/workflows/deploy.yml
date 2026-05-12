@@ -54,12 +54,10 @@ jobs:
       - name: Run shader-translation tests
         run: cargo test --manifest-path app/Cargo.toml --tests
 
-      - name: Determine public URL
-        id: public_url
-        run: echo "url=/${GITHUB_REPOSITORY##*/}/" >> "$GITHUB_OUTPUT"
-
       - name: Build (release)
-        run: trunk build --release --public-url "${{ steps.public_url.outputs.url }}"
+        # Path prefix must match what the deployment is served under.
+        # Keep this in sync with `pages_path` in the justfile.
+        run: trunk build --release --public-url /game-of-life-webgpu/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

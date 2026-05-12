@@ -7,8 +7,10 @@
 # the interesting part anyway — we want it running at proper speed locally
 # too, not just in CI.
 
-# The repo name as it appears on GitHub Pages — used for --public-url.
-pages_path := "/wasm-rustgpu-game-of-life/"
+# Path prefix the bundle is served from. Must match the URL segment that
+# precedes `index.html` in production, or asset fetches 404. For the
+# `life.forest-anderson.ca` deployment that's `/game-of-life-webgpu/`.
+pages_path := "/game-of-life-webgpu/"
 
 # Show available recipes.
 default:
