@@ -14,7 +14,6 @@ enum Tab {
     #[default]
     Sim,
     Import,
-    Stats,
     About,
 }
 
@@ -177,7 +176,6 @@ impl GameOfLifeApp {
                 ui.horizontal(|ui| {
                     ui.selectable_value(&mut self.tab, Tab::Sim, "Sim");
                     ui.selectable_value(&mut self.tab, Tab::Import, "Import");
-                    ui.selectable_value(&mut self.tab, Tab::Stats, "Stats");
                     ui.selectable_value(&mut self.tab, Tab::About, "About");
                 });
                 ui.separator();
@@ -185,7 +183,6 @@ impl GameOfLifeApp {
                 match self.tab {
                     Tab::Sim => self.tab_sim(ui),
                     Tab::Import => self.tab_import(ui),
-                    Tab::Stats => self.tab_stats(ui),
                     Tab::About => self.tab_about(ui),
                 }
             });
@@ -316,6 +313,65 @@ impl GameOfLifeApp {
 
         ui.separator();
         ui.small("• Left-click + drag in the grid to paint cells.");
+
+        ui.separator();
+
+        // --- timing + 30s compute chart ---
+        ui.strong("timing");
+
+        let stats = self.last_step_stats;
+        let active_label = match stats.backend {
+            SimBackend::Gpu => "active: GPU (rust-gpu compute shader)",
+            SimBackend::Cpu => "active: CPU (Rust kernel on the main thread)",
+        };
+        ui.colored_label(egui::Color32::from_rgb(120, 200, 240), active_label);
+
+        let ticks_run = stats.ticks.max(1);
+        let cpu_total_ms = stats.cpu_time.as_secs_f32() * 1000.0;
+        let cpu_per_tick_us = (cpu_total_ms * 1000.0) / ticks_run as f32;
+
+        match stats.backend {
+            SimBackend::Cpu => {
+                ui.label(format!(
+                    "CPU compute: {:.2} ms / step  ({:.1} µs/tick × {})",
+                    cpu_total_ms, cpu_per_tick_us, stats.ticks,
+                ));
+            }
+            SimBackend::Gpu => {
+                match stats.gpu_time {
+                    Some(gt) => {
+                        let gpu_ms = gt.as_secs_f32() * 1000.0;
+                        ui.label(format!(
+                            "GPU compute: {:.3} ms",
+                            gpu_ms,
+                        ));
+                    }
+                    None => {
+                        ui.label(
+                            egui::RichText::new(
+                                "GPU compute: timestamp-query unavailable in this browser",
+                            )
+                            .small()
+                            .color(egui::Color32::from_gray(160)),
+                        );
+                    }
+                }
+            }
+        }
+
+        let fps = if self.frame_dt_ms > 0.0 {
+            1000.0 / self.frame_dt_ms
+        } else {
+            0.0
+        };
+
+        ui.add_space(6.0);
+        ui.label(format!(
+            "30-second compute: avg {:.2} ms · p99 {:.2} ms",
+            self.fps_graph.avg_cpu_ms(),
+            self.fps_graph.p99_cpu_ms(),
+        ));
+        self.fps_graph.show(ui);
     }
 
     fn tab_import(&mut self, ui: &mut egui::Ui) {
@@ -363,74 +419,6 @@ impl GameOfLifeApp {
         }
     }
 
-    fn tab_stats(&mut self, ui: &mut egui::Ui) {
-        ui.strong("timing");
-
-        let stats = self.last_step_stats;
-        let active_label = match stats.backend {
-            SimBackend::Gpu => "active: GPU (rust-gpu compute shader)",
-            SimBackend::Cpu => "active: CPU (Rust kernel on the main thread)",
-        };
-        ui.colored_label(egui::Color32::from_rgb(120, 200, 240), active_label);
-
-        let ticks_run = stats.ticks.max(1);
-        let cpu_total_ms = stats.cpu_time.as_secs_f32() * 1000.0;
-        let cpu_per_tick_us = (cpu_total_ms * 1000.0) / ticks_run as f32;
-
-        match stats.backend {
-            SimBackend::Cpu => {
-                ui.label(format!(
-                    "CPU compute: {:.2} ms / step  ({:.1} µs/tick × {})",
-                    cpu_total_ms, cpu_per_tick_us, stats.ticks,
-                ));
-            }
-            SimBackend::Gpu => {
-                match stats.gpu_time {
-                    Some(gt) => {
-                        let gpu_ms = gt.as_secs_f32() * 1000.0;
-                        let gpu_per_tick_us = (gpu_ms * 1000.0) / ticks_run as f32;
-                        ui.label(format!(
-                            "GPU compute: {:.3} ms / step  ({:.1} µs/tick × {})",
-                            gpu_ms, gpu_per_tick_us, stats.ticks,
-                        ));
-                    }
-                    None => {
-                        ui.label(
-                            egui::RichText::new(
-                                "GPU compute: timestamp-query unavailable in this browser",
-                            )
-                            .small()
-                            .color(egui::Color32::from_gray(160)),
-                        );
-                    }
-                }
-                ui.small(format!(
-                    "dispatch overhead (CPU side): {:.2} ms — recording wgpu commands, \
-                     not the actual GPU work",
-                    cpu_total_ms,
-                ));
-            }
-        }
-
-        let fps = if self.frame_dt_ms > 0.0 {
-            1000.0 / self.frame_dt_ms
-        } else {
-            0.0
-        };
-        ui.small(format!(
-            "wall-clock frame: {:.1} ms  ({:.0} fps, vsync-capped)",
-            self.frame_dt_ms, fps,
-        ));
-
-        ui.add_space(6.0);
-        ui.label(format!(
-            "30-second compute: avg {:.2} ms · p99 {:.2} ms",
-            self.fps_graph.avg_cpu_ms(),
-            self.fps_graph.p99_cpu_ms(),
-        ));
-        self.fps_graph.show(ui);
-    }
-
     fn tab_about(&mut self, ui: &mut egui::Ui) {
         ui.strong("Game of Life on the GPU, in Rust");
         ui.add_space(4.0);
@@ -441,8 +429,8 @@ impl GameOfLifeApp {
         ui.label(
             "Toggle CPU/GPU in the Sim tab to compare the same B3/S23 \
              kernel running sequentially in Rust vs in parallel on the GPU. \
-             Per-tick timings and a 30-second compute chart are in the \
-             Stats tab.",
+             Per-tick timings and a 30-second compute chart live below the \
+             controls on the same tab.",
         );
     }
 
